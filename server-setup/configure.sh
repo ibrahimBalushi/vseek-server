@@ -13,6 +13,13 @@ echo "  STEP 1: Load configuration"
 echo "========================================="
 source config/variables.conf
 
+# Verify that required variables are set
+if [ -z "$DOMAIN" ] || [ -z "$EMAIL" ] || [ -z "$DUCKDNS_DOMAIN" ] || [ -z "$DUCKDNS_TOKEN" ]; then
+    echo "❌ One or more required variables are missing in config/variables.conf"
+    echo "   Please ensure DOMAIN, EMAIL, DUCKDNS_DOMAIN, and DUCKDNS_TOKEN are defined."
+    exit 1
+fi
+
 LOCAL_IP=$(hostname -I | awk '{print $1}')
 PUBLIC_IP=$(curl -s ifconfig.me)
 
@@ -21,6 +28,9 @@ echo "Public IP: $PUBLIC_IP"
 echo "Domain:    $DOMAIN"
 echo "Email:     $EMAIL"
 echo ""
+
+# TEMPORARY
+DOMAIN = $PUBLIC_IP
 
 # ----------------------------------------------------------------------
 # 2. Basic HTTP site setup (no SSL)
@@ -61,43 +71,65 @@ echo ""
 # ----------------------------------------------------------------------
 # 3. DuckDNS Dynamic DNS setup
 # ----------------------------------------------------------------------
-echo "========================================="
-echo "  STEP 3: Configure DuckDNS"
-echo "========================================="
+# echo "========================================="
+# echo "  STEP 3: Configure DuckDNS"
+# echo "========================================="
 
-mkdir -p ~/duckdns
+# mkdir -p ~/duckdns
 
-# Copy the duck.sh script (assumes it exists in duckdns/ directory)
-if [ ! -f duckdns/duck.sh ]; then
-    echo "❌ duckdns/duck.sh not found. Please ensure the file exists."
-    exit 1
-fi
-cp duckdns/duck.sh ~/duckdns/
-chmod +x ~/duckdns/duck.sh
+# # Create duck.sh directly with the correct token and domain
+# cat > ~/duckdns/duck.sh <<EOF
+# #!/bin/bash
+# curl -s "https://www.duckdns.org/update?domains=$DUCKDNS_DOMAIN&token=$DUCKDNS_TOKEN&ip="
+# EOF
 
-# Run it once to update IP
-echo "Updating DuckDNS with current public IP..."
-~/duckdns/duck.sh
+# chmod +x ~/duckdns/duck.sh
 
-# Add cron job for automatic updates every 5 minutes
-echo "Installing cron job for DuckDNS..."
-(crontab -l 2>/dev/null | grep -v "duck.sh"; echo "*/5 * * * * ~/duckdns/duck.sh >/dev/null 2>&1") | crontab -
+# # Run it once and check the response
+# echo "Updating DuckDNS with current public IP..."
+# UPDATE_RESPONSE=$(~/duckdns/duck.sh)
 
-# Verify DNS resolution
-echo "Checking DNS resolution for $DOMAIN..."
-sleep 5   # Give DuckDNS a moment to propagate
-DNS_IP=$(dig +short "$DOMAIN" | tail -n1)
-if [ -n "$DNS_IP" ]; then
-    echo "✅ DuckDNS resolves $DOMAIN to $DNS_IP"
-    if [ "$DNS_IP" != "$PUBLIC_IP" ]; then
-        echo "⚠️  Warning: Resolved IP ($DNS_IP) differs from current public IP ($PUBLIC_IP)."
-        echo "   This may be due to slow propagation. Wait a minute and re-run the check."
-    fi
-else
-    echo "❌ DNS resolution failed. Check your DuckDNS token and domain."
-    exit 1
-fi
-echo ""
+# if [ "$UPDATE_RESPONSE" = "OK" ]; then
+#     echo "✅ DuckDNS update successful."
+# else
+#     echo "❌ DuckDNS update failed with response: $UPDATE_RESPONSE"
+#     echo ""
+#     echo "Possible causes:"
+#     echo " - Wrong domain or token in config/variables.conf"
+#     echo "   → Current DUCKDNS_DOMAIN = '$DUCKDNS_DOMAIN'"
+#     echo "   → Current DUCKDNS_TOKEN  = '$DUCKDNS_TOKEN'"
+#     echo " - Network issue (cannot reach duckdns.org)"
+#     echo ""
+#     echo "To test manually, run:"
+#     echo "  curl -v \"https://www.duckdns.org/update?domains=$DUCKDNS_DOMAIN&token=$DUCKDNS_TOKEN&ip=\""
+#     echo ""
+#     exit 1
+# fi
+
+# # Add cron job – but don't exit on failure
+# echo "Installing cron job for DuckDNS..."
+# if (crontab -l 2>/dev/null | grep -v "duck.sh"; echo "*/5 * * * * ~/duckdns/duck.sh >/dev/null 2>&1") | crontab - ; then
+#     echo "✅ Cron job installed."
+# else
+#     echo "⚠️  Failed to install cron job. You may need to add it manually:"
+#     echo "   */5 * * * * ~/duckdns/duck.sh >/dev/null 2>&1"
+#     # Continue anyway – DuckDNS update succeeded
+# fi
+
+# # Verify DNS resolution (optional, but helpful)
+# if command -v dig &> /dev/null; then
+#     echo "Checking DNS resolution for $DOMAIN..."
+#     sleep 5
+#     DNS_IP=$(dig +short "$DOMAIN" | tail -n1)
+#     if [ -n "$DNS_IP" ]; then
+#         echo "✅ DuckDNS resolves $DOMAIN to $DNS_IP"
+#     else
+#         echo "⚠️  DNS resolution failed – but update succeeded. This may take a few minutes."
+#     fi
+# else
+#     echo "⚠️  'dig' not found – skipping DNS resolution check."
+# fi
+# echo ""
 
 # ----------------------------------------------------------------------
 # 4. Manual step: port forwarding
