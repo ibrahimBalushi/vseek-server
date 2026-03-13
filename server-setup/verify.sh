@@ -164,6 +164,59 @@ fi
 print_divider
 
 # ----------------------------------------------------------------------
+# Test: NAT Hairpin/Loopback Detection
+# ----------------------------------------------------------------------
+print_header "Test: NAT Hairpin Support"
+
+print_info "Testing if router supports NAT hairpin..."
+if curl -k -s --max-time 5 "https://$PUBLIC_IP" | grep -q "Hello World"; then
+    print_success "Router supports NAT hairpin - internal access via public IP works!"
+else
+    print_warning "Router does NOT support NAT hairpin"
+    print_info "This is normal - many consumer routers lack this feature."
+    print_info ""
+    print_info "To access your server from INSIDE your network:"
+    print_info "  1. Use local IP directly: https://$LOCAL_IP"
+    print_info "  2. Or add to /etc/hosts: $LOCAL_IP $DOMAIN"
+    print_info "  3. Or check router for 'NAT Loopback' setting"
+    echo ""
+    
+    # Test if hosts file already has entry
+    if grep -q "$DOMAIN" /etc/hosts; then
+        HOSTS_IP=$(grep "$DOMAIN" /etc/hosts | awk '{print $1}')
+        if [ "$HOSTS_IP" = "$LOCAL_IP" ]; then
+            print_success "Hosts file already configured correctly"
+        else
+            print_warning "Hosts file has wrong IP for $DOMAIN: $HOSTS_IP (should be $LOCAL_IP)"
+        fi
+    else
+        print_info "To fix temporarily, run:"
+        print_info "  echo \"$LOCAL_IP $DOMAIN\" | sudo tee -a /etc/hosts"
+    fi
+fi
+print_divider
+
+# ----------------------------------------------------------------------
+# Step : NAT Hairpin Test
+# ----------------------------------------------------------------------
+print_headerTesting "internal domain access"
+
+echo "Testing if you can access https://$DOMAIN from this machine..."
+if curl -k -s --max-time 5 "https://$DOMAIN" | grep -q "Hello World"; then
+    echo "✅ Success! Your router supports NAT hairpin."
+else
+    echo "⚠️  Cannot access domain from inside your network."
+    echo ""
+    echo "This is normal if your router doesn't support NAT hairpin."
+    echo "To access your server locally using the domain name:"
+    echo ""
+    echo "  echo \"$LOCAL_IP $DOMAIN\" | sudo tee -a /etc/hosts"
+    echo ""
+    echo "Or use the local IP directly: https://$LOCAL_IP"
+fi
+echo ""
+
+# ----------------------------------------------------------------------
 # Test 4: DuckDNS Resolution
 # ----------------------------------------------------------------------
 print_header "Test 4: DuckDNS Resolution"
