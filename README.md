@@ -65,6 +65,7 @@ server-setup/
 
 ### Turn into execution scripts via bash commands:
 `chmod +x install.sh`
+
 `chmod +x configure.sh`
 `chmod +x verify.sh`
 
