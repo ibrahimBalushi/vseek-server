@@ -58,15 +58,17 @@ server-setup/
     └── duck.sh
 ```
  
-### Follow the steps:
+## Installation
 ### Download repo to server home directory *after fresh install*:
 `git clone  server-setup`
+
 `cd server-setup`
 
 ### Turn into execution scripts via bash commands:
 `chmod +x install.sh`
 
 `chmod +x configure.sh`
+
 `chmod +x verify.sh`
 
 ### To confirm it worked:
@@ -74,7 +76,9 @@ server-setup/
 
 ### You should see:
 `-rwxr-xr-x install.sh`
+
 `-rwxr-xr-x configure.sh`
+
 `-rwxr-xr-x verify.sh`
 
 ### Install all packages:
