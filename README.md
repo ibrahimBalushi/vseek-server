@@ -17,11 +17,7 @@ Automated Ubuntu Server bootstrap for secure web hosting
 
 - [Purpose](#purpose)
 - [Project Structure](#project-structure)
-- [Quick Start](#quick-start)
 - [Installation](#installation)
-- [Architecture](#architecture)
-- [Verification](#verification)
-- [Author](#author)
 
 ---
 
@@ -39,7 +35,7 @@ Designed for **Streamlit apps, personal projects, and secure home hosting**.
 
 ---
 
-## Project Structure
+## Project-structure
 
 ```text
 server-setup/
@@ -57,6 +53,8 @@ server-setup/
 └── duckdns/
     └── duck.sh
 ```
+
+---
  
 ## Installation
 ### Download repo to server home directory *after fresh install*:
