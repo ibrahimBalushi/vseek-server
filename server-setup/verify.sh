@@ -97,7 +97,7 @@ fi
 
 # Check listening ports
 print_info "Checking listening ports..."
-PORTS=$(sudo ss -tlnp | grep -E ':(80|443|8443)')
+PORTS=$(sudo ss -tlnp | grep -E ':(80|443)')
 if echo "$PORTS" | grep -q ":80"; then
     print_success "Port 80 is listening"
 else
@@ -148,17 +148,17 @@ print_divider
 print_header "Test 3: Local HTTPS Access"
 
 # Test localhost
-if curl -k -s --max-time 5 https://localhost | grep -q "Hello World"; then
+if curl -k -s --max-time 5 https://localhost:$HTTPS_PORT | grep -q "Hello World"; then
     print_success "Localhost HTTPS works"
 else
-    print_error "Cannot access https://localhost"
+    print_error "Cannot access https://localhost:$HTTPS_PORT"
 fi
 
 # Test local IP
-if curl -k -s --max-time 5 https://$LOCAL_IP | grep -q "Hello World"; then
+if curl -k -s --max-time 5 https://$LOCAL_IP:$HTTPS_PORT | grep -q "Hello World"; then
     print_success "Local IP HTTPS works"
 else
-    print_error "Cannot access https://$LOCAL_IP"
+    print_error "Cannot access https://$LOCAL_IP:$HTTPS_PORT"
 fi
 
 print_divider
@@ -212,7 +212,7 @@ else
     echo ""
     echo "  echo \"$LOCAL_IP $DOMAIN\" | sudo tee -a /etc/hosts"
     echo ""
-    echo "Or use the local IP directly: https://$LOCAL_IP"
+    echo "Or use the local IP directly: https://$LOCAL_IP:$HTTPS_PORT"
 fi
 echo ""
 
@@ -261,7 +261,7 @@ print_divider
 print_header "Test 5: NAT Loopback Test"
 
 print_info "Testing if server can reach itself via public IP..."
-if curl -4 -k -s --max-time 5 "https://$PUBLIC_IP" | grep -q "Hello World"; then
+if curl -4 -k -s --max-time 5 "https://$PUBLIC_IP:$HTTPS_PORT" | grep -q "Hello World"; then
     print_success "NAT loopback works - server can reach itself via public IP"
 else
     print_warning "NAT loopback failed - this is normal for many routers"
@@ -360,40 +360,6 @@ fi
 print_divider
 
 # ----------------------------------------------------------------------
-# Test 8: ISP Block Test (Alternative Port)
-# ----------------------------------------------------------------------
-print_header "Test 8: ISP Block Test (Port 8443)"
-
-print_info "Testing if ISP blocks ports by using alternative port 8443"
-print_info "Setting up temporary test on port 8443..."
-
-# Check if port 8443 is already configured
-if ! sudo ss -tlnp | grep -q ":8443"; then
-    # Add temporary port 8443 to nginx config
-    if [ -f /etc/nginx/sites-available/vseek ]; then
-        # Check if port 8443 is already in config
-        if ! grep -q "listen 8443" /etc/nginx/sites-available/vseek; then
-            sudo sed -i '/listen 443 ssl;/a \    listen 8443 ssl;' /etc/nginx/sites-available/vseek
-            sudo nginx -t && sudo systemctl reload nginx
-            print_success "Temporarily added port 8443 to nginx"
-        fi
-    fi
-fi
-
-if sudo ss -tlnp | grep -q ":8443"; then
-    print_success "Port 8443 is listening"
-    print_info ""
-    print_info "To test if your ISP blocks ports, run this from your phone (cellular data):"
-    print_info "  curl -k https://$PUBLIC_IP:8443"
-    print_info ""
-    print_info "If this works but port 443 doesn't, your ISP is blocking port 443"
-else
-    print_warning "Could not configure port 8443 for testing"
-fi
-
-print_divider
-
-# ----------------------------------------------------------------------
 # Summary and Recommendations
 # ----------------------------------------------------------------------
 print_header "Diagnostic Summary"
@@ -429,10 +395,10 @@ echo ""
 echo "📋 **Manual Tests to Run from Outside:**"
 echo ""
 echo "1. From your phone (cellular data, WiFi OFF):"
-echo "   curl -v http://$DOMAIN"
-echo "   curl -v https://$DOMAIN"
-echo "   curl -v http://$PUBLIC_IP"
-echo "   curl -v https://$PUBLIC_IP"
+echo "   curl -v http://$DOMAIN:$HTTP_PORT"
+echo "   curl -v https://$DOMAIN:$HTTPS_PORT"
+echo "   curl -v http://$PUBLIC_IP:$HTTP_PORT"
+echo "   curl -v https://$PUBLIC_IP:$HTTPS_PORT"
 echo ""
 echo "2. Online port checker:"
 echo "   https://canyouseeme.org - Check ports 80 and 443"

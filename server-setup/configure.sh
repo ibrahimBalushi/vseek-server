@@ -57,7 +57,7 @@ sudo systemctl restart nginx
 
 # Verify local access
 echo "Verifying local access to HTTP site..."
-if curl -s http://localhost | grep -q "Hello World"; then
+if curl -s http://localhost:$HTTP_PORT | grep -q "Hello World"; then
     echo "✅ Local HTTP test passed."
 else
     echo "❌ Local HTTP test failed. Check nginx logs: sudo journalctl -u nginx"
