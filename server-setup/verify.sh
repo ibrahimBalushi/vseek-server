@@ -199,7 +199,7 @@ print_divider
 # ----------------------------------------------------------------------
 # Step : NAT Hairpin Test
 # ----------------------------------------------------------------------
-print_headerTesting "internal domain access"
+print_header "Test: internal domain access"
 
 echo "Testing if you can access https://$DOMAIN from this machine..."
 if curl -k -s --max-time 5 "https://$DOMAIN" | grep -q "Hello World"; then
@@ -275,22 +275,49 @@ print_divider
 # ----------------------------------------------------------------------
 print_header "Test 6: SSL Certificate"
 
-# Check certificate files
-if [ -f /etc/letsencrypt/live/$DOMAIN/fullchain.pem ]; then
+# Check for Let's Encrypt certificate
+if [ -d /etc/letsencrypt/live/$DOMAIN ]; then
     print_success "Let's Encrypt certificate found"
     
     # Check expiration
-    EXPIRY=$(sudo openssl x509 -in /etc/letsencrypt/live/$DOMAIN/fullchain.pem -noout -enddate | cut -d= -f2)
-    print_info "Certificate expires: $EXPIRY"
-else
-    # Check for self-signed certificate
-    if [ -f /etc/nginx/ssl/selfsigned.crt ]; then
-        print_warning "Using self-signed certificate"
-        EXPIRY=$(sudo openssl x509 -in /etc/nginx/ssl/selfsigned.crt -noout -enddate | cut -d= -f2)
-        print_info "Self-signed cert expires: $EXPIRY"
-    else
-        print_error "No SSL certificate found"
+    if [ -f /etc/letsencrypt/live/$DOMAIN/fullchain.pem ]; then
+        EXPIRY=$(sudo openssl x509 -in /etc/letsencrypt/live/$DOMAIN/fullchain.pem -noout -enddate | cut -d= -f2)
+        print_info "Certificate expires: $EXPIRY"
+        
+        # Calculate days until expiry
+        EXPIRY_EPOCH=$(sudo openssl x509 -in /etc/letsencrypt/live/$DOMAIN/fullchain.pem -noout -enddate | cut -d= -f2 | date -d "$(cat)" +%s 2>/dev/null || echo "unknown")
+        if [ "$EXPIRY_EPOCH" != "unknown" ]; then
+            NOW_EPOCH=$(date +%s)
+            DAYS_LEFT=$(( ($EXPIRY_EPOCH - $NOW_EPOCH) / 86400 ))
+            if [ $DAYS_LEFT -lt 30 ]; then
+                print_warning "Certificate expires in $DAYS_LEFT days"
+            else
+                print_success "Certificate valid for $DAYS_LEFT more days"
+            fi
+        fi
     fi
+elif [ -f /etc/nginx/ssl/selfsigned.crt ]; then
+    print_warning "Using self-signed certificate"
+    EXPIRY=$(sudo openssl x509 -in /etc/nginx/ssl/selfsigned.crt -noout -enddate | cut -d= -f2)
+    print_info "Self-signed cert expires: $EXPIRY"
+else
+    # Check alternative common locations
+    if [ -f /etc/letsencrypt/live/vseek-server.duckdns.org/fullchain.pem ]; then
+        print_success "Let's Encrypt certificate found (hardcoded path)"
+    else
+        print_error "No SSL certificate found in standard locations"
+        print_info "Checked:"
+        print_info "  - /etc/letsencrypt/live/$DOMAIN/"
+        print_info "  - /etc/letsencrypt/live/vseek-server.duckdns.org/"
+        print_info "  - /etc/nginx/ssl/selfsigned.crt"
+    fi
+fi
+
+# Also check if nginx config references the certificate
+if grep -q "ssl_certificate.*$DOMAIN" /etc/nginx/sites-available/vseek 2>/dev/null; then
+    print_success "Nginx config references the certificate"
+else
+    print_warning "Nginx config may not reference the certificate correctly"
 fi
 
 print_divider

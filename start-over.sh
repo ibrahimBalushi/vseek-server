@@ -29,9 +29,10 @@ sudo ufw --force disable
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 
-# Add only SSH and Nginx Full (or OpenSSH) – adjust if you changed SSH port
-sudo ufw allow OpenSSH
-sudo ufw allow 'Nginx Full'
+# Add only SSH and HTTP/HTTPS – adjust if you changed SSH port
+sudo ufw allow $SSH_PORT/tcp
+sudo ufw allow $HTTP_PORT/tcp
+sudo ufw allow $HTTPS_PORT/tcp
 
 # Re-enable UFW
 sudo ufw --force enable
@@ -49,6 +50,6 @@ sudo systemctl restart fail2ban
 sudo rm -f /var/www/html/index.html   # or restore a backup if you had one
 
 # (Optional) Remove any config backups or temporary files you created
-sudo apt remove --purge -y nginx ufw fail2ban certbot python3-certbot-nginx glances dnsutils
+sudo apt remove --purge -y nginx ufw fail2ban certbot python3-certbot-nginx dnsutils
 sudo apt autoremove -y
 sudo apt autoclean
